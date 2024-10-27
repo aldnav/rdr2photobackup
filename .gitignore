@@ -1,0 +1,6 @@
+/target
+tests/rdr2/backup-folder/PRDR*
+tests/rdr2/backup-folder/*.jpeg
+tests/rdr2/photos/PRDR*
+*.DS_Store
+.vscode

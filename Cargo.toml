@@ -1,0 +1,11 @@
+[package]
+name = "rdr2photobackup"
+version = "0.1.0"
+edition = "2021"
+authors = ["Aldrin Navarro <dev.aldnav@gmail.com>"]
+description = "A simple Rust program to backup personal photos captured from Red Dead Redemption 2"
+keywords = ["rdr2", "photo", "backup", "rust", "red-dead-redemption-2"]
+
+[dependencies]
+serial_test = "3.1.1"
+walkdir = "2.5.0"
