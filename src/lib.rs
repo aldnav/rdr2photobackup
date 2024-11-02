@@ -4,28 +4,129 @@ use std::io::prelude::*;
 use std::path::Path;
 use walkdir::WalkDir;
 
-/// Backup files from source to target directory
-pub fn backup(source_dir: &str, target_dir: &str) -> bool {
-    let (source_path, target_path) = assert_source_and_target_dirs_exist(source_dir, target_dir);
-    return copy_files(source_path, target_path, false).len() > 0;
+/// Generalizes backup operations with options to move and convert files
+pub fn general_backup(
+    source_dir: &str,
+    target_dir: &str,
+    move_files: bool,
+    convert_files: bool,
+) -> Result<(), String> {
+    if move_files && convert_files {
+        if let Err(err) = backup_and_convert(source_dir, target_dir) {
+            return Err(err);
+        }
+    } else if !move_files && convert_files {
+        if let Err(err) = copy_and_convert(source_dir, target_dir) {
+            return Err(err);
+        }
+    } else {
+        if let Err(err) = backup(source_dir, target_dir) {
+            return Err(err);
+        }
+    }
+    Ok(())
+}
+
+/// Backup files from source to target directory (does not convert)
+pub fn backup(source_dir: &str, target_dir: &str) -> Result<bool, String> {
+    let source_path;
+    let target_path;
+    let res = assert_source_and_target_dirs_exist(source_dir, target_dir);
+    match res {
+        Ok((src, target)) => {
+            source_path = src;
+            target_path = target;
+        }
+        Err(err) => return Err(err),
+    }
+    Ok(copy_files(source_path, target_path, false).len() > 0)
 }
 
 /// Backup files from source to target directory and convert them to JPEG
-pub fn backup_and_convert(source_dir: &str, target_dir: &str) -> bool {
-    let (source_path, target_path) = assert_source_and_target_dirs_exist(source_dir, target_dir);
-    copy_files(source_path, target_path, true)
+pub fn backup_and_convert(source_dir: &str, target_dir: &str) -> Result<bool, String> {
+    let source_path;
+    let target_path;
+    let res = assert_source_and_target_dirs_exist(source_dir, target_dir);
+    match res {
+        Ok((src, target)) => {
+            source_path = src;
+            target_path = target;
+        }
+        Err(err) => return Err(err),
+    }
+    Ok(copy_files(source_path, target_path, true)
         .iter()
         .map(|file| {
             convert_to_jpeg(file);
         })
         .count()
-        > 0
+        > 0)
+}
+
+/// Copy files from source (not moved) to target directory and convert them to JPEG
+pub fn copy_and_convert(source_dir: &str, target_dir: &str) -> Result<bool, String> {
+    let source_path;
+    let target_path;
+    let res = assert_source_and_target_dirs_exist(source_dir, target_dir);
+    match res {
+        Ok((src, target)) => {
+            source_path = src;
+            target_path = target;
+        }
+        Err(err) => return Err(err),
+    }
+    Ok(copy_files(source_path, target_path, false)
+        .iter()
+        .map(|file| {
+            convert_to_jpeg(file);
+        })
+        .count()
+        > 0)
+}
+
+/// Check that the folder has files to backup
+pub fn verify_has_source_files(source_path: &str) -> Result<(), String> {
+    for _entry in WalkDir::new(source_path)
+        .into_iter()
+        .filter_map(|e| {
+            e.ok().filter(|e| {
+                e.file_name()
+                    .to_str()
+                    .map_or(false, |s| s.starts_with(PHOTO_PREFIX))
+            })
+        })
+        .take(1)
+    {
+        return Ok(());
+    }
+    Err("No files to backup".to_string())
+
+    // let first_file = WalkDir::new(source_path).into_iter().find_map(|e| {
+    //     Some(
+    //         e.inspect(|e| println!("{}", e.path().display()))
+    //             .unwrap()
+    //             .file_name()
+    //             .to_str()
+    //             .unwrap()
+    //             .starts_with(PHOTO_PREFIX),
+    //     )
+    // });
+    // dbg!(first_file.unwrap());
+    // // match first_file.unwrap() {
+    // //     true => Ok(()),
+    // //     false => Err("No files to backup".to_string()),
+    // // }
+    // if first_file.unwrap() {
+    //     return Ok(());
+    // } else {
+    //     return Err("No files to backup".to_string());
+    // }
 }
 
 fn assert_source_and_target_dirs_exist<'a>(
     source_dir: &'a str,
     target_dir: &'a str,
-) -> (&'a Path, &'a Path) {
+) -> Result<(&'a Path, &'a Path), String> {
     let source_path = Path::new(source_dir);
     let _source_path_exists = match source_path.exists() {
         true => true,
@@ -44,7 +145,13 @@ fn assert_source_and_target_dirs_exist<'a>(
         true => true,
         false => panic!("Target path is not a directory"),
     };
-    return (source_path, target_path);
+    let source_has_files = verify_has_source_files(source_dir);
+    // source_has_files.expect("No files to backup");
+    match source_has_files {
+        Ok(has_files) => has_files,
+        Err(err) => return Err(err),
+    };
+    return Ok((source_path, target_path));
 }
 
 const PHOTO_PREFIX: &str = "PRD";

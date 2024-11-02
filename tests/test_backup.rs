@@ -40,7 +40,7 @@ fn source_dir_exists() {
     let source_dir = test_case!("photos");
     let target_dir = test_case!("backup-folder");
     let result = backup(source_dir, target_dir);
-    assert_eq!(result, true);
+    assert_eq!(result.unwrap(), true);
 
     // [!] Uses panic::catch_unwind()
     // use std::panic;
@@ -69,7 +69,7 @@ fn target_dir_exists() {
     let source_dir = test_case!("photos");
     let target_dir = test_case!("backup-folder");
     let result = backup(source_dir, target_dir);
-    assert_eq!(result, true);
+    assert_eq!(result.unwrap(), true);
 }
 
 #[test]
@@ -80,7 +80,8 @@ fn target_dir_does_not_exist() {
     // [!] Uses unwrap_err()
     let source_dir = test_case!("photos");
     let target_dir = test_case!("dne-backup-folder");
-    backup(source_dir, target_dir);
+    let res = backup(source_dir, target_dir);
+    assert_eq!(res.unwrap(), true);
 }
 
 #[test]
@@ -90,7 +91,7 @@ fn file_is_copied() {
     let source_dir = test_case!("photos");
     let target_dir = test_case!("backup-folder");
     let result = backup(source_dir, target_dir);
-    assert_eq!(result, true);
+    assert_eq!(result.unwrap(), true);
     assert!(Path::new(test_case!("backup-folder/PRDR34088256_1")).exists());
     tear_down();
 }
@@ -102,7 +103,7 @@ fn file_is_copied_and_converted() {
     let source_dir = test_case!("photos");
     let target_dir = test_case!("backup-folder");
     let result = backup_and_convert(source_dir, target_dir);
-    assert_eq!(result, true);
+    assert_eq!(result.unwrap(), true);
     // assert!(Path::new(test_case!("backup-folder/PRDR34088256_1.jpg")).exists());
     assert!(!Path::new(test_case!("photos/PRDR34088256_1")).exists());
     tear_down();
@@ -143,8 +144,16 @@ fn backup_and_convert_files() {
     let source_dir = test_case!("photos");
     let target_dir = test_case!("backup-folder");
     let result = backup_and_convert(source_dir, target_dir);
-    assert_eq!(result, true);
+    assert_eq!(result.unwrap(), true);
     assert!(!Path::new(test_case!("photos/PRDR34088256_1")).exists());
     assert!(Path::new(test_case!("backup-folder/240929_PRDR34088256_1.jpeg")).exists());
     tear_down();
 }
+
+// #[test]
+// #[serial]
+// fn verify_source_dir_has_files() {
+//     let source_dir = test_case!("photos");
+//     let result = verify_has_source_files(source_dir);
+//     assert_eq!(result, Ok(()));
+// }
